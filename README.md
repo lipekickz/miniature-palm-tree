@@ -1,1 +1,2 @@
-# miniature-palm-tree
+# UTAU Voicebank Editor
+Projeto inicial.
