@@ -182,12 +182,42 @@ exportSettings.onclick = ()=>{
     a.click();
 };
 
-exportZip.onclick = async ()=>{
-    if(files.length === 0){
-        alert("Nenhum arquivo carregado.");
-        return;
-    }
+exportZip.onclick = async () => {
+    try {
+        if (files.length === 0) {
+            alert("Nenhum arquivo carregado.");
+            return;
+        }
 
+        alert("Iniciando exportação...");
+
+        const zip = new JSZip();
+
+        for (const file of files) {
+            zip.file(file.name, file);
+        }
+
+        const blob = await zip.generateAsync({
+            type: "blob"
+        });
+
+        alert("ZIP criado!");
+
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "voicebank.zip";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        alert("Download iniciado!");
+    }
+    catch (e) {
+        alert("Erro: " + e.message);
+        console.error(e);
+    }
+};
+    
     const zip = new JSZip();
 
     for(const file of files){
