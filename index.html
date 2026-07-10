@@ -5,57 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Voicebank Editor</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <style>
 body{
-    font-family:Arial,sans-serif;
     background:#111;
     color:white;
+    font-family:Arial,sans-serif;
     margin:0;
     padding:20px;
 }
-
 h1{
-    text-align:center;
+    margin-top:0;
 }
-
-.container{
-    display:flex;
-    gap:20px;
-    flex-wrap:wrap;
-}
-
-.panel{
-    background:#1b1b1b;
-    padding:15px;
-    border-radius:12px;
-    flex:1;
-    min-width:300px;
-}
-
 #fileList{
-    max-height:400px;
+    height:300px;
     overflow:auto;
+    border:1px solid #444;
+    margin-top:15px;
 }
-
 .file{
     padding:8px;
     border-bottom:1px solid #333;
     cursor:pointer;
 }
-
 .file:hover{
-    background:#2b2b2b;
+    background:#222;
 }
-
 input[type=range]{
     width:100%;
 }
-
+.box{
+    margin-top:20px;
+}
 button{
     padding:10px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
     margin-top:10px;
 }
 </style>
@@ -64,40 +48,29 @@ button{
 
 <h1>Voicebank Editor</h1>
 
-<input type="file" id="folder" multiple accept=".wav">
+<input type="file" id="audioInput" accept=".wav,.zip" multiple>
 
-<div class="container">
-
-<div class="panel">
-<h2>Arquivos</h2>
 <div id="fileList"></div>
-</div>
 
-<div class="panel">
-<h2>Editor</h2>
+<div class="box">
+    <p><b>Arquivo:</b> <span id="currentFile">Nenhum</span></p>
 
-<p><b>Arquivo:</b> <span id="currentName">Nenhum</span></p>
+    <audio id="player" controls></audio>
 
-<audio id="player" controls></audio>
+    <p>Pitch: <span id="pitchText">0</span></p>
+    <input type="range" id="pitch" min="-12" max="12" value="0">
 
-<p>Pitch: <span id="pitchValue">0</span></p>
-<input type="range" id="pitch" min="-12" max="12" value="0">
+    <p>Velocidade: <span id="speedText">1</span></p>
+    <input type="range" id="speed" min="0.5" max="2" step="0.1" value="1">
 
-<p>Velocidade: <span id="speedValue">1</span></p>
-<input type="range" id="speed" min="0.5" max="2" step="0.1" value="1">
+    <p>Volume: <span id="volumeText">100</span>%</p>
+    <input type="range" id="volume" min="0" max="200" value="100">
 
-<p>Volume: <span id="volumeValue">100</span>%</p>
-<input type="range" id="volume" min="0" max="200" value="100">
-
-<button id="applyAll">Aplicar para todos</button>
-<button id="exportSettings">Exportar Configurações</button>
-
-</div>
-
+    <button id="applyAll">Aplicar para todos</button>
 </div>
 
 <script>
-const folder = document.getElementById("folder");
+const audioInput = document.getElementById("audioInput");
 const fileList = document.getElementById("fileList");
 const player = document.getElementById("player");
 
@@ -105,68 +78,95 @@ const pitch = document.getElementById("pitch");
 const speed = document.getElementById("speed");
 const volume = document.getElementById("volume");
 
-const pitchValue = document.getElementById("pitchValue");
-const speedValue = document.getElementById("speedValue");
-const volumeValue = document.getElementById("volumeValue");
+const pitchText = document.getElementById("pitchText");
+const speedText = document.getElementById("speedText");
+const volumeText = document.getElementById("volumeText");
 
-const currentName = document.getElementById("currentName");
+const currentFile = document.getElementById("currentFile");
 
 let files = [];
 let settings = {};
 
-folder.addEventListener("change", e=>{
-    files = [...e.target.files];
+audioInput.addEventListener("change", async (e)=>{
+    files = [];
+    settings = {};
     fileList.innerHTML = "";
 
-    files.forEach(file=>{
-        const div = document.createElement("div");
-        div.className = "file";
-        div.textContent = file.name;
+    for(const file of e.target.files){
 
-        div.onclick = ()=>{
-            openFile(file);
-        };
+        if(file.name.toLowerCase().endsWith(".wav")){
+            addFile(file,file.name);
+        }
 
-        fileList.appendChild(div);
-    });
+        if(file.name.toLowerCase().endsWith(".zip")){
+            const zip = await JSZip.loadAsync(file);
+
+            for(const name in zip.files){
+                const entry = zip.files[name];
+
+                if(
+                    !entry.dir &&
+                    name.toLowerCase().endsWith(".wav")
+                ){
+                    const blob = await entry.async("blob");
+
+                    const wav = new File(
+                        [blob],
+                        name.split("/").pop(),
+                        {type:"audio/wav"}
+                    );
+
+                    addFile(wav,name);
+                }
+            }
+        }
+    }
 });
 
-function openFile(file){
-    currentName.textContent = file.name;
+function addFile(file,displayName){
+    files.push(file);
 
-    const url = URL.createObjectURL(file);
-    player.src = url;
+    const div = document.createElement("div");
+    div.className = "file";
+    div.textContent = displayName;
 
-    if(settings[file.name]){
-        loadSettings(settings[file.name]);
-    }
+    div.onclick = ()=>{
+        openFile(file);
+    };
+
+    fileList.appendChild(div);
 }
 
-function loadSettings(data){
-    pitch.value = data.pitch;
-    speed.value = data.speed;
-    volume.value = data.volume;
+function openFile(file){
+    currentFile.textContent = file.name;
+    player.src = URL.createObjectURL(file);
+
+    const data = settings[file.name];
+
+    if(data){
+        pitch.value = data.pitch;
+        speed.value = data.speed;
+        volume.value = data.volume;
+    }else{
+        pitch.value = 0;
+        speed.value = 1;
+        volume.value = 100;
+    }
 
     updateUI();
 }
 
 function updateUI(){
-    pitchValue.textContent = pitch.value;
-    speedValue.textContent = speed.value;
-    volumeValue.textContent = volume.value;
+    pitchText.textContent = pitch.value;
+    speedText.textContent = speed.value;
+    volumeText.textContent = volume.value;
 
     player.playbackRate = Number(speed.value);
-    player.volume = volume.value / 100;
+    player.volume = Number(volume.value)/100;
 }
 
-pitch.oninput = saveCurrent;
-speed.oninput = saveCurrent;
-volume.oninput = saveCurrent;
-
-function saveCurrent(){
-    updateUI();
-
-    const file = currentName.textContent;
+function saveSettings(){
+    const file = currentFile.textContent;
     if(file === "Nenhum") return;
 
     settings[file] = {
@@ -174,10 +174,16 @@ function saveCurrent(){
         speed:Number(speed.value),
         volume:Number(volume.value)
     };
+
+    updateUI();
 }
 
+pitch.oninput = saveSettings;
+speed.oninput = saveSettings;
+volume.oninput = saveSettings;
+
 document.getElementById("applyAll").onclick = ()=>{
-    const current = settings[currentName.textContent];
+    const current = settings[currentFile.textContent];
 
     if(!current){
         alert("Selecione um arquivo primeiro.");
@@ -189,18 +195,6 @@ document.getElementById("applyAll").onclick = ()=>{
     });
 
     alert("Configurações aplicadas a todos os WAVs.");
-};
-
-document.getElementById("exportSettings").onclick = ()=>{
-    const blob = new Blob(
-        [JSON.stringify(settings,null,2)],
-        {type:"application/json"}
-    );
-
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "voicebank-settings.json";
-    a.click();
 };
 </script>
 
