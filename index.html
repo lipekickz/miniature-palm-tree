@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voicebank Editor</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    background:#111;
+    color:white;
+    margin:0;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+}
+
+.container{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+}
+
+.panel{
+    background:#1b1b1b;
+    padding:15px;
+    border-radius:12px;
+    flex:1;
+    min-width:300px;
+}
+
+#fileList{
+    max-height:400px;
+    overflow:auto;
+}
+
+.file{
+    padding:8px;
+    border-bottom:1px solid #333;
+    cursor:pointer;
+}
+
+.file:hover{
+    background:#2b2b2b;
+}
+
+input[type=range]{
+    width:100%;
+}
+
+button{
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<h1>Voicebank Editor</h1>
+
+<input type="file" id="folder" multiple accept=".wav">
+
+<div class="container">
+
+<div class="panel">
+<h2>Arquivos</h2>
+<div id="fileList"></div>
+</div>
+
+<div class="panel">
+<h2>Editor</h2>
+
+<p><b>Arquivo:</b> <span id="currentName">Nenhum</span></p>
+
+<audio id="player" controls></audio>
+
+<p>Pitch: <span id="pitchValue">0</span></p>
+<input type="range" id="pitch" min="-12" max="12" value="0">
+
+<p>Velocidade: <span id="speedValue">1</span></p>
+<input type="range" id="speed" min="0.5" max="2" step="0.1" value="1">
+
+<p>Volume: <span id="volumeValue">100</span>%</p>
+<input type="range" id="volume" min="0" max="200" value="100">
+
+<button id="applyAll">Aplicar para todos</button>
+<button id="exportSettings">Exportar Configurações</button>
+
+</div>
+
+</div>
+
+<script>
+const folder = document.getElementById("folder");
+const fileList = document.getElementById("fileList");
+const player = document.getElementById("player");
+
+const pitch = document.getElementById("pitch");
+const speed = document.getElementById("speed");
+const volume = document.getElementById("volume");
+
+const pitchValue = document.getElementById("pitchValue");
+const speedValue = document.getElementById("speedValue");
+const volumeValue = document.getElementById("volumeValue");
+
+const currentName = document.getElementById("currentName");
+
+let files = [];
+let settings = {};
+
+folder.addEventListener("change", e=>{
+    files = [...e.target.files];
+    fileList.innerHTML = "";
+
+    files.forEach(file=>{
+        const div = document.createElement("div");
+        div.className = "file";
+        div.textContent = file.name;
+
+        div.onclick = ()=>{
+            openFile(file);
+        };
+
+        fileList.appendChild(div);
+    });
+});
+
+function openFile(file){
+    currentName.textContent = file.name;
+
+    const url = URL.createObjectURL(file);
+    player.src = url;
+
+    if(settings[file.name]){
+        loadSettings(settings[file.name]);
+    }
+}
+
+function loadSettings(data){
+    pitch.value = data.pitch;
+    speed.value = data.speed;
+    volume.value = data.volume;
+
+    updateUI();
+}
+
+function updateUI(){
+    pitchValue.textContent = pitch.value;
+    speedValue.textContent = speed.value;
+    volumeValue.textContent = volume.value;
+
+    player.playbackRate = Number(speed.value);
+    player.volume = volume.value / 100;
+}
+
+pitch.oninput = saveCurrent;
+speed.oninput = saveCurrent;
+volume.oninput = saveCurrent;
+
+function saveCurrent(){
+    updateUI();
+
+    const file = currentName.textContent;
+    if(file === "Nenhum") return;
+
+    settings[file] = {
+        pitch:Number(pitch.value),
+        speed:Number(speed.value),
+        volume:Number(volume.value)
+    };
+}
+
+document.getElementById("applyAll").onclick = ()=>{
+    const current = settings[currentName.textContent];
+
+    if(!current){
+        alert("Selecione um arquivo primeiro.");
+        return;
+    }
+
+    files.forEach(f=>{
+        settings[f.name] = {...current};
+    });
+
+    alert("Configurações aplicadas a todos os WAVs.");
+};
+
+document.getElementById("exportSettings").onclick = ()=>{
+    const blob = new Blob(
+        [JSON.stringify(settings,null,2)],
+        {type:"application/json"}
+    );
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "voicebank-settings.json";
+    a.click();
+};
+</script>
+
+</body>
+</html>
