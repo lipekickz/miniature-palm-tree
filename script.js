@@ -1,1 +1,0 @@
-alert('Projeto inicial.');
