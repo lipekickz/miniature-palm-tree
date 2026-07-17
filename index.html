@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Voicebank ZIP Editor</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#eee;max-width:900px;margin:auto;padding:20px}
+.card{background:#1b1b1b;padding:20px;border-radius:12px}
+input,button{margin:8px 0;padding:10px}
+progress{width:100%}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>UTAU Voicebank ZIP Editor</h2>
+<p>Selecione uma voicebank ZIP, ajuste pitch e velocidade e exporte um novo ZIP.</p>
+<input type="file" id="zip" accept=".zip"><br>
+<label>Pitch (semitons)</label>
+<input type="number" id="pitch" value="-3"><br>
+<label>Velocidade</label>
+<input type="number" step="0.01" id="speed" value="0.9"><br>
+<button onclick="run()">Processar</button>
+<progress id="prog" value="0" max="100"></progress>
+<pre id="log"></pre>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script type="module">
+import {FFmpeg} from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+window.run=async()=>{
+const log=t=>document.getElementById("log").textContent+=t+"\n";
+log("Este é um modelo funcional de interface.");
+log("Para processar WAVs é necessário carregar os arquivos do FFmpeg Core (ffmpeg-core.js/.wasm),");
+log("o que não pode ser incorporado em um único HTML.");
+log("Depois de configurar o FFmpeg Core, o script pode:");
+log("- Ler o ZIP com JSZip");
+log("- Converter todos os .wav");
+log("- Manter estrutura de pastas");
+log("- Copiar todos os oto.ini");
+log("- Exportar um novo ZIP");
+};
+</script>
+</body>
+</html>
